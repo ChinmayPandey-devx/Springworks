@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-purple: #7B3FE4;
+  --color-brand-purple-dark: #6C4FF6;
+  --color-brand-accent: #FFB020;
+  --color-brand-accent-dark: #FF8C42;
+  --color-brand-bg: #FAF9FF;
+}
+
+body {
+  background-color: var(--color-brand-bg);
+  font-family: 'Inter', system-ui, sans-serif;
+}
