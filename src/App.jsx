@@ -1,17 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Flame, Zap, Users, Star, 
-  MessageSquare, ChevronRight, Hash,
-  ThumbsUp, Smile, Clock, TrendingDown,
-  Award, Heart, Target, Send
+  ChevronRight, Hash, TrendingDown,
+  Award, Heart, Target, Clock, Lock, ArrowDownRight
 } from 'lucide-react';
 
 // === MOCK DATA ===
 const INITIAL_TEAMS = [
-  { id: '1', name: 'Design Divas', points: 450, color: 'bg-pink-100 text-pink-700' },
-  { id: '2', name: 'Dev Dynamos', points: 410, color: 'bg-blue-100 text-blue-700' },
-  { id: '3', name: 'Marketing Mavs', points: 380, color: 'bg-green-100 text-green-700' },
+  { id: '1', name: 'Design Divas', points: 450 },
+  { id: '2', name: 'Dev Dynamos', points: 410 },
+  { id: '3', name: 'Marketing Mavs', points: 380 },
 ];
 
 const SEASON_BADGES = [
@@ -27,96 +26,196 @@ const INITIAL_SHOUTOUTS = [
   { id: '3', from: 'Michael', to: 'Priya', value: 'Teamwork', timestamp: '2h ago', reactions: 15 },
 ];
 
-// === COMPONENTS ===
+// === CSS STYLES ===
+const styles = `
+  /* Globals */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; }
+  .app-container { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background-color: #FAF9FF; min-height: 100vh; padding-bottom: 80px; }
+  .header { background-color: #FFFFFF; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 50; }
+  .header-content { max-width: 900px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 22px; color: #111827; }
+  .brand-icon { width: 36px; height: 36px; background-color: #6C4FF6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; }
+  .nav-pills { display: flex; background-color: #F3F4F6; padding: 4px; border-radius: 8px; }
+  .nav-pill { padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; background: transparent; }
+  .nav-pill.active { background-color: #FFFFFF; color: #6C4FF6; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .nav-pill:not(.active) { color: #6B7280; }
+  .nav-pill:not(.active):hover { color: #374151; }
 
-const Card = ({ children, className = '', slackStyle = false, borderColor = 'border-brand-purple' }) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden ${slackStyle ? `border-l-4 ${borderColor}` : ''} ${className}`}>
-    {children}
-  </div>
-);
+  .main-content { max-width: 900px; margin: 0 auto; padding: 48px 20px 0; }
+  .hero-text { text-align: center; margin-bottom: 48px; }
+  .hero-title { font-size: 36px; font-weight: 800; color: #111827; margin: 0 0 16px 0; }
+  .hero-subtitle { color: #6B7280; max-width: 600px; margin: 0 auto; line-height: 1.6; font-size: 16px; }
 
-const SlackHeader = ({ channel, title }) => (
-  <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-50">
-    <Hash size={18} className="text-gray-400" />
-    <span className="font-bold text-gray-800">{channel}</span>
-    {title && (
-      <>
-        <span className="text-gray-300">|</span>
-        <span className="text-gray-500 text-sm">{title}</span>
-      </>
-    )}
-  </div>
-);
+  .toggle-container { display: flex; justify-content: center; margin-bottom: 40px; }
+  .toggle { display: inline-flex; background-color: #E5E7EB; padding: 6px; border-radius: 999px; }
+  .toggle-btn { padding: 10px 32px; border-radius: 999px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; background: transparent; }
+  .toggle-btn.active { background-color: #6C4FF6; color: #FFFFFF; box-shadow: 0 2px 8px rgba(108, 79, 246, 0.4); }
+  .toggle-btn:not(.active) { color: #4B5563; }
+  .toggle-btn:not(.active):hover { color: #111827; background-color: #D1D5DB; }
 
-const Toggle = ({ active, onChange, label1, label2 }) => (
-  <div className="flex items-center justify-center mb-8">
-    <div className="bg-gray-100 p-1 rounded-full inline-flex">
-      <button
-        onClick={() => onChange(false)}
-        className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-          !active ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
-        }`}
-      >
-        {label1}
-      </button>
-      <button
-        onClick={() => onChange(true)}
-        className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-          active ? 'bg-brand-purple text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-        }`}
-      >
-        {label2}
-      </button>
-    </div>
-  </div>
-);
+  /* Cards */
+  .card { background-color: #FFFFFF; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 24px; border: 1px solid #F3F4F6; }
+  .card-slack { border-left: 6px solid #6C4FF6; }
+  .card-slack-emerald { border-left: 6px solid #10B981; }
+  .card-slack-gray { border-left: 6px solid #9CA3AF; }
+  .card-body { padding: 24px; }
+  .slack-header { display: flex; align-items: center; gap: 8px; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid #F3F4F6; }
+  .slack-channel { font-weight: 700; color: #1F2937; display: flex; align-items: center; gap: 4px; }
+  .slack-title-sep { color: #D1D5DB; font-weight: 400; }
+  .slack-title { color: #6B7280; font-size: 14px; font-weight: 500; }
+
+  /* Trivia Tabs */
+  .gradient-hero { background: linear-gradient(135deg, #6C4FF6, #FFB020); padding: 32px; color: #FFFFFF; position: relative; overflow: hidden; border-radius: 16px 16px 0 0; }
+  .season-tag { background: rgba(255,255,255,0.25); backdrop-filter: blur(4px); padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 16px; }
+  .season-title { font-size: 28px; font-weight: 800; margin: 0 0 8px 0; line-height: 1.2; }
+  .season-timer { color: rgba(255,255,255,0.95); font-size: 14px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  .hero-icon { position: absolute; right: -24px; bottom: -24px; color: rgba(255,255,255,0.15); transform: rotate(-15deg); }
+
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; }
+  @media (max-width: 768px) { .grid-2-1 { grid-template-columns: 1fr; } }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-weight: 800; color: #1F2937; font-size: 16px; margin: 0; }
+
+  .sim-btn { background-color: #6C4FF6; color: #FFFFFF; border: none; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 6px rgba(108,79,246,0.3); }
+  .sim-btn:hover { background-color: #5B3FE0; }
+
+  .leaderboard-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 12px; background-color: #F9FAFB; border: 1px solid #E5E7EB; margin-bottom: 10px; }
+  .rank-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+  .rank-1 { background-color: #FFB020; color: #FFFFFF; box-shadow: 0 2px 6px rgba(255,176,32,0.4); }
+  .rank-other { background-color: #E5E7EB; color: #4B5563; }
+  .team-name { flex: 1; font-weight: 700; color: #1F2937; font-size: 15px; }
+  .team-points { font-weight: 800; color: #6C4FF6; font-size: 16px; }
+
+  .mvp-card { background-color: #FAF9FF; border-radius: 12px; padding: 20px; border: 2px solid rgba(108, 79, 246, 0.15); text-align: center; }
+  .mvp-avatar { width: 72px; height: 72px; margin: 0 auto 12px; background: linear-gradient(135deg, #6C4FF6, #FFB020); border-radius: 50%; padding: 3px; position: relative; }
+  .mvp-avatar-inner { background-color: #FFFFFF; width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #6C4FF6; }
+  .mvp-star { position: absolute; bottom: -2px; right: -2px; background-color: #FFB020; color: #FFFFFF; padding: 5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+  .mvp-name { font-weight: 800; color: #1F2937; margin: 0 0 4px 0; font-size: 16px; }
+  .mvp-desc { font-size: 13px; color: #6B7280; margin: 0; line-height: 1.4; }
+
+  .badges-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid #E5E7EB; }
+  .badges-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 640px) { .badges-grid { grid-template-columns: repeat(2, 1fr); } }
+  .badge-item { padding: 16px; border-radius: 16px; border: 2px solid; text-align: center; position: relative; }
+  .badge-earned { background-color: rgba(255, 176, 32, 0.05); border-color: rgba(255, 176, 32, 0.2); }
+  .badge-locked { background-color: #F9FAFB; border-color: #E5E7EB; opacity: 0.7; }
+  .badge-icon-wrapper { width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .badge-icon-earned { background-color: #FFB020; color: #FFFFFF; box-shadow: 0 4px 12px rgba(255, 176, 32, 0.3); }
+  .badge-icon-locked { background-color: #D1D5DB; color: #6B7280; }
+  .badge-name { font-size: 13px; font-weight: 800; color: #1F2937; margin: 0; }
+  .lock-icon { position: absolute; top: 8px; right: 8px; color: #9CA3AF; }
+
+  /* Shoutout Tabs */
+  .shoutout-before-layout { display: flex; gap: 32px; align-items: flex-start; }
+  @media (max-width: 768px) { .shoutout-before-layout { flex-direction: column; } }
+  .shoutout-form { flex: 2; width: 100%; }
+  .shoutout-friction { flex: 1; background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 16px; padding: 24px; margin-top: 16px; }
+  .friction-title { font-weight: 800; color: #991B1B; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-size: 16px; }
+  .friction-desc { font-size: 14px; color: #7F1D1D; line-height: 1.6; margin: 0; }
+
+  .form-group { margin-bottom: 24px; }
+  .form-label { display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 10px; }
+  .form-input { width: 100%; padding: 14px; border: 1px solid #D1D5DB; border-radius: 10px; background-color: #F9FAFB; color: #6B7280; font-size: 14px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; font-family: inherit; }
+  .form-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .form-chip { padding: 8px 16px; border: 1px solid #D1D5DB; border-radius: 999px; font-size: 14px; font-weight: 500; color: #4B5563; background-color: #FFFFFF; }
+  .form-textarea { height: 100px; resize: none; width: 100%; padding: 14px; border: 1px solid #D1D5DB; border-radius: 10px; background-color: #F9FAFB; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+  .form-submit { width: 100%; background-color: #E5E7EB; color: #9CA3AF; padding: 16px; border-radius: 10px; font-weight: 800; border: none; font-size: 16px; }
+  .form-disabled-overlay { opacity: 0.6; pointer-events: none; }
+
+  .slack-message { display: flex; gap: 16px; position: relative; }
+  .slack-avatar { width: 44px; height: 44px; border-radius: 8px; background-color: #DBEAFE; color: #1D4ED8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+  .slack-msg-content { flex: 1; }
+  .slack-msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .slack-msg-name { font-weight: 800; color: #1F2937; font-size: 15px; }
+  .slack-msg-time { font-size: 12px; color: #9CA3AF; font-weight: 500; }
+  .slack-msg-text { color: #374151; line-height: 1.5; margin: 0 0 16px 0; font-size: 15px; }
+  .slack-actions { display: flex; align-items: center; gap: 12px; }
+  .reaction-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid #D1D5DB; background-color: #FFFFFF; color: #6B7280; cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .reaction-btn:hover:not(.reacted) { background-color: #F3F4F6; border-color: #9CA3AF; }
+  .reaction-btn.reacted { background-color: #FFFBEB; border-color: #FFB020; color: #B45309; }
+  .reaction-hint { font-size: 13px; color: #6B7280; display: flex; align-items: center; gap: 6px; font-weight: 500; background-color: #F3F4F6; padding: 4px 12px; border-radius: 999px; }
+  .emoji-trigger-badge { position: absolute; top: -16px; left: 0; background-color: #6C4FF6; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(108,79,246,0.3); }
+
+  .feed-container { position: relative; margin-top: 32px; padding-left: 24px; }
+  .feed-line { position: absolute; left: 44px; top: -32px; bottom: 0; width: 2px; background-color: #E5E7EB; z-index: 0; }
+  .feed-card-wrapper { position: relative; z-index: 10; margin-left: 12px; }
+
+  .feed-list { max-height: 400px; overflow-y: auto; padding-right: 8px; }
+  .feed-list::-webkit-scrollbar { width: 6px; }
+  .feed-list::-webkit-scrollbar-track { background: transparent; }
+  .feed-list::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 6px; }
+  .feed-item { padding: 16px; border-radius: 12px; border: 1px solid #E5E7EB; background-color: #FFFFFF; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .feed-item.new-item { background-color: #ECFDF5; border-color: #10B981; border-left: 4px solid #10B981; }
+  .feed-item-content { display: flex; gap: 12px; align-items: flex-start; }
+  .avatars-overlap { display: flex; margin-right: 8px; }
+  .avatar-1 { width: 36px; height: 36px; border-radius: 50%; background-color: #6C4FF6; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; border: 2px solid #FFFFFF; z-index: 2; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  .avatar-2 { width: 36px; height: 36px; border-radius: 50%; background-color: #FFB020; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; border: 2px solid #FFFFFF; z-index: 1; margin-left: -12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  .feed-text { font-size: 14px; color: #374151; margin: 0 0 10px 0; line-height: 1.5; }
+  .feed-text strong { color: #111827; font-weight: 800; }
+  .feed-value-tag { display: inline-block; padding: 2px 10px; background-color: #FAF9FF; color: #6C4FF6; border-radius: 999px; font-size: 12px; font-weight: 800; margin: 0 4px; border: 1px solid rgba(108,79,246,0.2); }
+  .feed-meta { display: flex; align-items: center; gap: 16px; font-size: 12px; color: #6B7280; font-weight: 500; }
+  .feed-reactions { display: flex; align-items: center; gap: 4px; }
+
+  .stat-strip { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #E5E7EB; margin-top: 20px; padding-top: 20px; }
+  .stat-item { display: flex; align-items: center; gap: 16px; }
+  .stat-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .stat-icon-up { background-color: #D1FAE5; color: #059669; }
+  .stat-text { font-size: 15px; font-weight: 800; color: #111827; display: flex; align-items: baseline; gap: 6px; }
+  .stat-subtext { color: #6B7280; font-weight: 500; font-size: 14px; }
+  .stat-desc { font-size: 13px; color: #6B7280; margin-top: 4px; margin-bottom: 0; }
+  
+  .trend-box { padding: 16px; border: 1px solid #E5E7EB; border-radius: 12px; background-color: #FFFFFF; display: flex; align-items: flex-end; gap: 8px; height: 160px; margin-top: 12px; }
+  .trend-bar { background-color: #E5E7EB; flex: 1; border-radius: 4px 4px 0 0; position: relative; }
+  .trend-label { position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #6B7280; font-weight: 600; white-space: nowrap; }
+`;
 
 // --- TAB 1: TRIVIA SEASONS ---
 
 const TriviaBefore = () => (
   <motion.div 
-    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-    className="max-w-xl mx-auto space-y-6"
+    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+    style={{ maxWidth: '600px', margin: '0 auto' }}
   >
-    <Card slackStyle borderColor="border-gray-400" className="p-5">
-      <SlackHeader channel="trivia-time" />
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded bg-brand-purple flex items-center justify-center text-white font-bold">
-          <Target size={20} />
+    <div className="card card-slack card-slack-gray">
+      <div className="card-body">
+        <div className="slack-header">
+          <Hash size={18} color="#9CA3AF" />
+          <span className="slack-channel">trivia-time</span>
         </div>
-        <div>
-          <h4 className="font-bold text-gray-800">Quiz complete!</h4>
-          <p className="text-gray-600 mt-1">Winner: Priya (8/10)</p>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Session Leaderboard</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-800">1. Priya</span><span className="font-medium">8 pts</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600">2. Rahul</span><span className="font-medium text-gray-500">6 pts</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600">3. Amit</span><span className="font-medium text-gray-500">5 pts</span></div>
+        
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#6C4FF6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', flexShrink: 0 }}>
+            <Target size={20} color="#FFFFFF" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h4 style={{ margin: '0 0 4px 0', fontWeight: '800', color: '#1F2937', fontSize: '16px' }}>Quiz complete!</h4>
+            <p style={{ margin: '0 0 16px 0', color: '#4B5563', fontSize: '14px' }}>Winner: Priya (8/10)</p>
+            
+            <div style={{ padding: '16px', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#374151' }}>Session Leaderboard</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#1F2937', fontWeight: '600' }}>1. Priya</span><span style={{ fontWeight: '700' }}>8 pts</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#6B7280' }}>2. Rahul</span><span style={{ color: '#9CA3AF', fontWeight: '600' }}>6 pts</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#6B7280' }}>3. Amit</span><span style={{ color: '#9CA3AF', fontWeight: '600' }}>5 pts</span></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </Card>
+    </div>
 
-    <div className="px-2">
-      <div className="flex items-center gap-2 mb-2">
-        <TrendingDown size={18} className="text-red-400" />
-        <h4 className="font-semibold text-gray-700 text-sm">Engagement Plateau</h4>
+    <div style={{ padding: '0 8px', marginTop: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <TrendingDown size={18} color="#EF4444" />
+        <h4 style={{ margin: 0, fontWeight: '700', color: '#374151', fontSize: '14px' }}>Engagement Plateau</h4>
       </div>
-      <div className="h-32 bg-white rounded-xl border border-gray-100 p-4 flex items-end gap-2">
-        {/* Mock Sparkline */}
-        <div className="w-1/3 bg-gray-200 rounded-t h-full relative group">
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500">Week 1</div>
-        </div>
-        <div className="w-1/3 bg-gray-200 rounded-t h-2/3 relative group">
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500">Week 4</div>
-        </div>
-        <div className="w-1/3 bg-gray-200 rounded-t h-1/3 relative group">
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500">Week 8</div>
-        </div>
+      <div className="trend-box">
+        <div className="trend-bar" style={{ height: '100%' }}><span className="trend-label">Week 1</span></div>
+        <div className="trend-bar" style={{ height: '65%' }}><span className="trend-label">Week 4</span></div>
+        <div className="trend-bar" style={{ height: '30%' }}><span className="trend-label">Week 8</span></div>
       </div>
-      <p className="text-sm text-gray-500 mt-3 text-center italic">
+      <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '40px', textAlign: 'center', fontStyle: 'italic' }}>
         "Same 4 people play every time. Everyone else stopped opening it."
       </p>
     </div>
@@ -136,99 +235,88 @@ const TriviaAfter = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-      className="max-w-2xl mx-auto space-y-6"
+      initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+      style={{ maxWidth: '800px', margin: '0 auto' }}
     >
-      <Card slackStyle borderColor="border-brand-purple" className="p-0 overflow-hidden">
-        <div className="bg-gradient-to-r from-brand-purple to-brand-accent p-6 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
-              Week 2 of 4
-            </span>
-            <h2 className="text-2xl font-extrabold mt-3 mb-1">Season 3: Q3 Trivia Cup</h2>
-            <p className="text-white/80 text-sm flex items-center gap-2">
-              <Clock size={14} /> Season ends in 12 days — next reset unlocks new badges
-            </p>
+      <div className="card card-slack" style={{ padding: 0 }}>
+        <div className="gradient-hero">
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            <span className="season-tag">Week 2 of 4</span>
+            <h2 className="season-title">Season 3: Q3 Trivia Cup</h2>
+            <div className="season-timer">
+              <Clock size={16} color="#FFFFFF" /> Season ends in 12 days — next reset unlocks new badges
+            </div>
           </div>
-          <Trophy className="absolute right-[-20px] bottom-[-20px] text-white/10 w-48 h-48 rotate-[-15deg]" />
+          <Trophy size={150} className="hero-icon" />
         </div>
         
-        <div className="p-6">
-          <SlackHeader channel="trivia-time" title="Season Standings" />
+        <div className="card-body">
+          <div className="slack-header">
+            <Hash size={18} color="#9CA3AF" />
+            <span className="slack-channel">trivia-time</span>
+            <span className="slack-title-sep">|</span>
+            <span className="slack-title">Season Standings</span>
+          </div>
           
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800">Team Leaderboard</h3>
-                <button 
-                  onClick={simulateSession}
-                  className="text-xs bg-brand-purple/10 text-brand-purple hover:bg-brand-purple/20 px-3 py-1.5 rounded-full font-semibold transition-colors flex items-center gap-1"
-                >
-                  <zap size={12} /> Simulate next session
+          <div className="grid-2-1">
+            <div>
+              <div className="flex-between">
+                <h3 className="section-title">Team Leaderboard</h3>
+                <button onClick={simulateSession} className="sim-btn">
+                  <Zap size={14} color="#FFFFFF" /> Simulate next session
                 </button>
               </div>
-              <div className="space-y-3">
+              <div>
                 <AnimatePresence>
                   {teams.map((team, index) => (
                     <motion.div 
                       key={team.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"
+                      className="leaderboard-row"
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        index === 0 ? 'bg-brand-accent text-white' : 'bg-gray-200 text-gray-600'
-                      }`}>
+                      <div className={`rank-badge ${index === 0 ? 'rank-1' : 'rank-other'}`}>
                         {index + 1}
                       </div>
-                      <div className="flex-1 font-semibold text-gray-800">{team.name}</div>
-                      <div className="font-bold text-brand-purple">{team.points} pts</div>
+                      <div className="team-name">{team.name}</div>
+                      <div className="team-points">{team.points} pts</div>
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-bold text-gray-800 mb-3">Season MVP</h3>
-                <div className="bg-brand-bg rounded-xl p-4 border border-brand-purple/20 text-center">
-                  <div className="w-14 h-14 mx-auto bg-gradient-to-br from-brand-purple to-brand-accent rounded-full p-1 mb-2 relative">
-                    <div className="bg-white w-full h-full rounded-full flex items-center justify-center text-lg font-bold text-brand-purple">
-                      P
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 bg-brand-accent text-white p-1 rounded-full shadow-sm">
-                      <Star size={12} className="fill-current" />
-                    </div>
-                  </div>
-                  <h4 className="font-bold text-gray-800">Priya Sharma</h4>
-                  <p className="text-xs text-gray-500 mt-1">Most consistent player — played 7/8 sessions</p>
+            <div>
+              <h3 className="section-title" style={{ marginBottom: '16px' }}>Season MVP</h3>
+              <div className="mvp-card">
+                <div className="mvp-avatar">
+                  <div className="mvp-avatar-inner">P</div>
+                  <div className="mvp-star"><Star size={12} color="#FFFFFF" fill="#FFFFFF" /></div>
                 </div>
+                <h4 className="mvp-name">Priya Sharma</h4>
+                <p className="mvp-desc">Most consistent player — played 7/8 sessions this season</p>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-100">
-            <h3 className="font-bold text-gray-800 mb-4">Your Season Badges</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="badges-section">
+            <h3 className="section-title">Your Season Badges</h3>
+            <div className="badges-grid">
               {SEASON_BADGES.map(badge => (
-                <div key={badge.id} className={`p-3 rounded-xl border text-center transition-all ${
-                  badge.earned ? 'bg-brand-accent/10 border-brand-accent/30' : 'bg-gray-50 border-gray-100 opacity-60 grayscale'
-                }`}>
-                  <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${
-                    badge.earned ? 'bg-brand-accent text-white shadow-sm' : 'bg-gray-200 text-gray-400'
-                  }`}>
-                    <badge.icon size={20} className={badge.earned ? 'fill-white/20' : ''} />
+                <div key={badge.id} className={`badge-item ${badge.earned ? 'badge-earned' : 'badge-locked'}`}>
+                  {!badge.earned && <Lock size={14} className="lock-icon" />}
+                  <div className={`badge-icon-wrapper ${badge.earned ? 'badge-icon-earned' : 'badge-icon-locked'}`}>
+                    <badge.icon size={24} color={badge.earned ? "#FFFFFF" : "#9CA3AF"} fill={badge.earned ? "#FFFFFF" : "transparent"} />
                   </div>
-                  <div className="text-xs font-bold text-gray-800">{badge.name}</div>
+                  <h4 className="badge-name">{badge.name}</h4>
                 </div>
               ))}
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </motion.div>
   );
 };
@@ -237,54 +325,52 @@ const TriviaAfter = () => {
 
 const EngageBefore = () => (
   <motion.div 
-    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-    className="max-w-2xl mx-auto flex flex-col md:flex-row gap-8 items-start"
+    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+    className="shoutout-before-layout"
   >
-    <div className="w-full md:w-2/3">
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-          <div className="w-8 h-8 rounded bg-gray-800 flex items-center justify-center text-white">
-            <Award size={16} />
+    <div className="shoutout-form">
+      <div className="card">
+        <div className="card-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #E5E7EB' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#1F2937', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Award size={16} color="#FFFFFF" />
+            </div>
+            <h3 style={{ margin: 0, fontWeight: '800', color: '#111827', fontSize: '18px' }}>Give Recognition</h3>
           </div>
-          <h3 className="font-bold text-gray-800 text-lg">Give Recognition</h3>
-        </div>
-        
-        <div className="space-y-5 relative opacity-80 pointer-events-none">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Step 1: Select a teammate</label>
-            <div className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 flex justify-between">
-              Select user... <ChevronRight size={16} className="rotate-90" />
+          
+          <div className="form-disabled-overlay">
+            <div className="form-group">
+              <label className="form-label">Step 1: Select a teammate</label>
+              <div className="form-input">
+                Select user... <ChevronRight size={16} color="#9CA3AF" style={{ transform: 'rotate(90deg)' }} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Step 2: Select a core value</label>
+              <div className="form-chips">
+                <span className="form-chip">Collaboration</span>
+                <span className="form-chip">Innovation</span>
+                <span className="form-chip">Ownership</span>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Step 3: Write a note</label>
+              <textarea className="form-textarea" placeholder="Why are you recognizing them?" disabled></textarea>
+            </div>
+            <div style={{ paddingTop: '8px' }}>
+              <button className="form-submit" disabled>Submit Recognition</button>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Step 2: Select a core value</label>
-            <div className="flex gap-2 flex-wrap">
-              {['Collaboration', 'Innovation', 'Ownership'].map(v => (
-                <span key={v} className="px-3 py-1.5 border border-gray-200 rounded-full text-sm text-gray-500 bg-gray-50">{v}</span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Step 3: Write a note</label>
-            <textarea className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 h-24 text-sm" placeholder="Why are you recognizing them?" disabled></textarea>
-          </div>
-          <div className="pt-2">
-            <button disabled className="w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-bold">Submit Recognition</button>
-          </div>
         </div>
-      </Card>
+      </div>
     </div>
     
-    <div className="w-full md:w-1/3 pt-8">
-      <div className="bg-red-50 border border-red-100 rounded-xl p-5 relative">
-        <div className="absolute -left-3 top-6 w-3 h-3 bg-red-400 rotate-45 hidden md:block"></div>
-        <TrendingDown className="text-red-500 mb-3" size={24} />
-        <h4 className="font-bold text-gray-800 mb-2">High Friction</h4>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          <strong className="text-gray-800">4 steps, ~90 seconds.</strong><br/><br/>
-          Most spontaneous appreciation moments never make it this far because the formal process is too heavy for small wins.
-        </p>
-      </div>
+    <div className="shoutout-friction">
+      <h4 className="friction-title"><TrendingDown size={20} color="#991B1B" /> High Friction</h4>
+      <p className="friction-desc">
+        <strong style={{ color: '#7F1D1D', fontWeight: '800' }}>4 steps, ~90 seconds.</strong><br/><br/>
+        Most spontaneous appreciation moments never make it this far because the formal process is too heavy for small wins.
+      </p>
     </div>
   </motion.div>
 );
@@ -297,7 +383,6 @@ const EngageAfter = () => {
     if (reacted) return;
     setReacted(true);
     
-    // Simulate auto-generation delay
     setTimeout(() => {
       setShoutouts([{
         id: Date.now().toString(),
@@ -313,101 +398,107 @@ const EngageAfter = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-      className="max-w-2xl mx-auto space-y-8"
+      initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+      style={{ maxWidth: '800px', margin: '0 auto' }}
     >
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative">
-        <div className="absolute -top-3 left-6 bg-brand-purple text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-          <Star size={12} className="fill-current" /> Trigger via Emoji
+      <div className="card" style={{ padding: '24px' }}>
+        <div className="slack-header">
+          <Hash size={18} color="#9CA3AF" />
+          <span className="slack-channel">product-team</span>
         </div>
         
-        <SlackHeader channel="product-team" />
-        
-        <div className="flex items-start gap-4 mb-2">
-          <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-            R
+        <div className="slack-message">
+          <div className="emoji-trigger-badge">
+            <Star size={12} color="#FFFFFF" fill="#FFFFFF" /> Trigger via Emoji
           </div>
-          <div className="flex-1">
-            <div className="flex items-baseline gap-2">
-              <span className="font-bold text-gray-800">Rahul</span>
-              <span className="text-xs text-gray-400">11:42 AM</span>
+          
+          <div className="slack-avatar">R</div>
+          <div className="slack-msg-content">
+            <div className="slack-msg-header">
+              <span className="slack-msg-name">Rahul</span>
+              <span className="slack-msg-time">11:42 AM</span>
             </div>
-            <p className="text-gray-700 mt-1">Just pushed the new dashboard updates to production. Analytics are tracking perfectly! 🚀</p>
+            <p className="slack-msg-text">Just pushed the new dashboard updates to production. Analytics are tracking perfectly! 🚀</p>
             
-            <div className="mt-3 flex items-center gap-2">
-              <button 
-                onClick={handleReact}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all ${
-                  reacted ? 'bg-brand-accent/10 border-brand-accent text-brand-accent-dark' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                }`}
-              >
-                <Star size={14} className={reacted ? "fill-current" : ""} />
-                <span className="text-xs font-bold">{reacted ? '2' : '1'}</span>
+            <div className="slack-actions">
+              <button onClick={handleReact} className={`reaction-btn ${reacted ? 'reacted' : ''}`}>
+                <Star size={14} color={reacted ? "#B45309" : "#6B7280"} fill={reacted ? "#B45309" : "transparent"} />
+                <span>{reacted ? '2' : '1'}</span>
               </button>
-              <div className="text-xs text-gray-400 flex items-center gap-1">
-                <ChevronRight size={14} /> Click the star to give a shoutout!
-              </div>
+              {!reacted && (
+                <div className="reaction-hint">
+                  <ArrowDownRight size={14} color="#6B7280" /> Click the star to give a shoutout!
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="relative">
-        <div className="absolute left-8 top-[-20px] bottom-0 w-px bg-gray-200 z-0"></div>
-        <div className="relative z-10 space-y-4">
-          <Card slackStyle borderColor="border-emerald-500" className="p-5 ml-4">
-            <SlackHeader channel="kudos" title="Company-wide Feed" />
-            
-            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-              <AnimatePresence initial={false}>
-                {shoutouts.map((post) => (
-                  <motion.div
-                    key={post.id}
-                    initial={{ opacity: 0, height: 0, y: -20 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
-                    className={`p-4 rounded-xl border ${post.isNew ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white border-gray-100'}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-brand-purple text-white flex items-center justify-center text-xs font-bold ring-2 ring-white z-10">
-                          {post.from.charAt(0)}
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-brand-accent text-white flex items-center justify-center text-xs font-bold ring-2 ring-white z-0">
-                          {post.to.charAt(0)}
+      <div className="feed-container">
+        <div className="feed-line"></div>
+        <div className="feed-card-wrapper">
+          <div className="card card-slack-emerald">
+            <div className="card-body">
+              <div className="slack-header">
+                <Hash size={18} color="#9CA3AF" />
+                <span className="slack-channel">kudos</span>
+                <span className="slack-title-sep">|</span>
+                <span className="slack-title">Company-wide Feed</span>
+              </div>
+              
+              <div className="feed-list">
+                <AnimatePresence initial={false}>
+                  {shoutouts.map((post) => (
+                    <motion.div
+                      key={post.id}
+                      initial={{ opacity: 0, height: 0, y: -20, marginBottom: 0 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0, marginBottom: 12 }}
+                      transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div className={`feed-item ${post.isNew ? 'new-item' : ''}`}>
+                        <div className="feed-item-content">
+                          <div className="avatars-overlap">
+                            <div className="avatar-1">{post.from.charAt(0)}</div>
+                            <div className="avatar-2">{post.to.charAt(0)}</div>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p className="feed-text">
+                              <strong>{post.from}</strong> gave <strong>{post.to}</strong> a shoutout for 
+                              <span className="feed-value-tag">{post.value}</span> 🎉
+                            </p>
+                            <div className="feed-meta">
+                              <span>{post.timestamp}</span>
+                              {post.reactions > 0 && (
+                                <span className="feed-reactions">
+                                  <Heart size={12} color="#EF4444" fill="#EF4444" /> {post.reactions}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-gray-800 text-sm">
-                          <strong>{post.from}</strong> gave <strong>{post.to}</strong> a shoutout for <span className="inline-block px-2 py-0.5 bg-brand-bg text-brand-purple rounded-full text-xs font-bold ml-1">{post.value}</span> 🎉
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span>{post.timestamp}</span>
-                          {post.reactions > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Heart size={12} className="text-red-400 fill-current" /> {post.reactions}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+              
+              <div className="stat-strip">
+                <div className="stat-item">
+                  <div className="stat-icon stat-icon-up">
+                    <TrendingDown size={18} color="#059669" style={{ transform: 'rotate(180deg)' }} />
+                  </div>
+                  <div>
+                    <div className="stat-text">
+                      This week: 47 shoutouts <span className="stat-subtext">vs 6 formal recognitions</span>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                  <TrendingDown size={16} className="rotate-180" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-gray-800">This week: 47 shoutouts <span className="text-gray-400 font-normal">vs 6 formal recognitions</span></div>
-                  <div className="text-xs text-gray-500">Formal awards still matter — shoutouts just catch what slips through.</div>
+                    <p className="stat-desc">Formal awards still matter — shoutouts just catch what slips through.</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -422,82 +513,80 @@ export default function App() {
   const [isAfter, setIsAfter] = useState(true);
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* Top Navigation */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 font-black text-xl tracking-tight text-gray-900">
-              <div className="w-8 h-8 bg-brand-purple rounded-lg flex items-center justify-center text-white">
-                <Smile size={20} />
+    <>
+      <style>{styles}</style>
+      <div className="app-container">
+        <header className="header">
+          <div className="header-content">
+            <div className="brand">
+              <div className="brand-icon">
+                <Zap size={20} color="#FFFFFF" fill="#FFFFFF" />
               </div>
               Springworks
             </div>
             
-            <div className="flex bg-gray-100 p-1 rounded-lg">
+            <div className="nav-pills">
               <button 
                 onClick={() => { setActiveTab('trivia'); setIsAfter(true); }}
-                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${
-                  activeTab === 'trivia' ? 'bg-white shadow-sm text-brand-purple' : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`nav-pill ${activeTab === 'trivia' ? 'active' : ''}`}
               >
                 Trivia Seasons
               </button>
               <button 
                 onClick={() => { setActiveTab('engage'); setIsAfter(true); }}
-                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${
-                  activeTab === 'engage' ? 'bg-white shadow-sm text-brand-purple' : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`nav-pill ${activeTab === 'engage' ? 'active' : ''}`}
               >
                 One-Tap Shoutouts
               </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-4xl mx-auto px-4 pt-12">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
-            {activeTab === 'trivia' ? 'From One-Off Games to Persistent Play' : 'Frictionless Peer Recognition'}
-          </h1>
-          <p className="text-gray-500 max-w-xl mx-auto">
-            {activeTab === 'trivia' 
-              ? 'Solving the engagement plateau by turning single sessions into multi-week team seasons with unlockable rewards.'
-              : 'Empowering spontaneous appreciation by replacing heavy forms with intuitive emoji-triggered workflows.'}
-          </p>
-        </div>
+        <main className="main-content">
+          <div className="hero-text">
+            <h1 className="hero-title">
+              {activeTab === 'trivia' ? 'From One-Off Games to Persistent Play' : 'Frictionless Peer Recognition'}
+            </h1>
+            <p className="hero-subtitle">
+              {activeTab === 'trivia' 
+                ? 'Solving the engagement plateau by turning single sessions into multi-week team seasons with unlockable rewards.'
+                : 'Empowering spontaneous appreciation by replacing heavy forms with intuitive emoji-triggered workflows.'}
+            </p>
+          </div>
 
-        <Toggle 
-          active={isAfter} 
-          onChange={setIsAfter} 
-          label1="Before: The Gap" 
-          label2="After: The Solution" 
-        />
+          <div className="toggle-container">
+            <div className="toggle">
+              <button 
+                onClick={() => setIsAfter(false)}
+                className={`toggle-btn ${!isAfter ? 'active' : ''}`}
+              >
+                Before: The Gap
+              </button>
+              <button 
+                onClick={() => setIsAfter(true)}
+                className={`toggle-btn ${isAfter ? 'active' : ''}`}
+              >
+                After: The Solution
+              </button>
+            </div>
+          </div>
 
-        <div className="relative mt-8">
-          <AnimatePresence mode="wait">
-            {activeTab === 'trivia' && (
-              <motion.div key={`trivia-${isAfter}`}>
-                {isAfter ? <TriviaAfter /> : <TriviaBefore />}
-              </motion.div>
-            )}
-            {activeTab === 'engage' && (
-              <motion.div key={`engage-${isAfter}`}>
-                {isAfter ? <EngageAfter /> : <EngageBefore />}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-      
-      {/* CSS for custom scrollbar hidden in regular tailwind */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
-      `}} />
-    </div>
+          <div style={{ position: 'relative' }}>
+            <AnimatePresence mode="wait">
+              {activeTab === 'trivia' && (
+                <motion.div key={`trivia-${isAfter}`}>
+                  {isAfter ? <TriviaAfter /> : <TriviaBefore />}
+                </motion.div>
+              )}
+              {activeTab === 'engage' && (
+                <motion.div key={`engage-${isAfter}`}>
+                  {isAfter ? <EngageAfter /> : <EngageBefore />}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
